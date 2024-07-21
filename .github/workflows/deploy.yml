@@ -1,0 +1,30 @@
+name: Deploy to Sakura
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        eval "$(ssh-agent -s)"
+        ssh-add ~/.ssh/id_rsa
+
+    - name: Sync files
+      run: |
+        rsync -avz --delete \
+        -e "ssh -o StrictHostKeyChecking=no" \
+        ./theme/ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_SERVER }}:${{ secrets.OUTPUT_DIR }}
+      env:
+        SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        SERVER_USERNAME: ${{ secrets.FTP_USERNAME }}
+        SERVER_HOST: ${{ secrets.FTP_SERVER }}
